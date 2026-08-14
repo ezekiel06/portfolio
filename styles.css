@@ -380,10 +380,6 @@ a:hover {
   padding: 20px;
 }
 
-.section-alt .edu-card {
-  background: #fff;
-}
-
 .edu-card h3 {
   margin: 0 0 6px;
   font-size: 1.1rem;
@@ -492,7 +488,7 @@ a:hover {
     background: #0f1620;
   }
 
-  .honor-note, .timeline-org {
-    color: #c7d0da;
+  .honor-note, .timeline-org, .subhead, .pill-list li {
+    color: #dbe2ea;
   }
 }
