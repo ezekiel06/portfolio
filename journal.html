@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Journal | Zeke M. Horton</title>
+<meta name="description" content="Project journal — start-to-finish write-ups of what Zeke Horton built, what broke, and how it got fixed." />
+<link rel="stylesheet" href="styles.css?v=5" />
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav container">
+    <a href="index.html" class="brand">Zeke Horton</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#skills">Skills</a></li>
+      <li><a href="index.html#education">Education</a></li>
+      <li><a href="journal.html" class="active">Journal</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section class="section journal-hero">
+    <div class="container">
+      <p class="eyebrow eyebrow-light">Project Journal</p>
+      <h1 class="journal-title">Start to finish, bugs and all</h1>
+      <p class="lead">
+        Each entry here covers one project the way it actually happened &mdash;
+        the goal, the build, what broke, and how I fixed it. No cleanup, no
+        skipped steps.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <ul class="journal-list">
+        <li class="journal-card">
+          <a href="journal-portfolio-site.html" class="journal-card-link">
+            <span class="journal-date">August 14, 2026</span>
+            <h2>Building My Portfolio Site with Claude Code</h2>
+            <p>
+              From a resume PDF and a blocked LinkedIn URL to a live, deployed
+              personal site &mdash; including two rounds of dark-mode contrast
+              bugs, a GitHub Pages deployment that looked stuck, and catching
+              a math error in my own resume stats.
+            </p>
+            <span class="journal-read-more">Read entry &rarr;</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>&copy; <span id="year"></span> Zeke M. Horton. Built with Claude Code.</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
