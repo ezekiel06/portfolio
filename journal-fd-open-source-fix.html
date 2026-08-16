@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My First Open-Source Pull Request | Zeke M. Horton</title>
+<meta name="description" content="A start-to-finish write-up of finding, fixing, testing, and pushing a real bug fix to an open-source CLI tool using Claude Code — including a dead-end issue that taught me to verify before I trust a label." />
+<link rel="stylesheet" href="styles.css?v=5" />
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav container">
+    <a href="index.html" class="brand">Zeke Horton</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#skills">Skills</a></li>
+      <li><a href="index.html#education">Education</a></li>
+      <li><a href="journal.html" class="active">Journal</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <article class="section entry">
+    <div class="container entry-container">
+      <a href="journal.html" class="entry-back">&larr; Back to Journal</a>
+      <p class="journal-date">August 15, 2026</p>
+      <h1>My First Open-Source Pull Request</h1>
+
+      <div class="entry-content">
+        <h2>The goal</h2>
+        <p>
+          After the portfolio site, I wanted a next project that would push me
+          past "I can build something from scratch" and into "I can work
+          inside someone else's codebase." Fixing a real bug in an existing
+          open-source project felt like the right next step &mdash; it forces
+          you to read code you didn't write, understand why it's structured
+          the way it is, and change it without breaking anything else.
+        </p>
+
+        <h2>The first target wasn't actually a bug</h2>
+        <p>
+          I started with <code>sharkdp/bat</code>, a popular syntax-highlighting
+          replacement for <code>cat</code>, and picked issue #1618, a
+          "good first issue" about <code>--list-themes</code> breaking when
+          combined with certain pager settings. Before writing any code,
+          Claude cloned the repo, built it from source, and reran the exact
+          reproduction steps from the issue. It was already fixed on
+          <code>main</code> &mdash; fixed years ago, in fact. Nobody had gone
+          back to close the ticket, and eight or nine other contributors had
+          independently "discovered" it was still open and submitted
+          duplicate fixes that never got merged or cleaned up.
+        </p>
+        <p>
+          That was a genuinely useful dead end. A "good first issue" label
+          doesn't mean the issue is still open, and it doesn't mean the label
+          is being maintained. Verify against current <code>main</code> before
+          writing a single line of code, or you risk adding to a pile of
+          duplicate work nobody asked for.
+        </p>
+
+        <h2>Finding a real one</h2>
+        <p>
+          I pivoted to <code>sharkdp/fd</code>, a fast alternative to
+          <code>find</code>, from the same maintainer. The two issues
+          actually labeled "good first issue" there turned out to be broad,
+          open-ended tracking tickets rather than small bugs &mdash; one about
+          building out an entire benchmark suite, one an umbrella
+          "general refactoring" discussion. Not what I wanted for a first PR,
+          so instead of trusting the label, Claude scanned fd's full list of
+          open bugs and checked which ones didn't already have a stack of
+          unmerged duplicate pull requests attached to them &mdash; the same
+          pattern that had burned the first attempt.
+        </p>
+        <p>
+          That turned up issue #1985: <code>fd</code> can't handle
+          arbitrarily deep directory trees the way GNU <code>find</code> can,
+          because it constructs full file paths and eventually hits the
+          operating system's path-length limit. The complete fix for that
+          needs changes to fd's underlying dependencies, which was too large
+          a first PR. But buried in the issue discussion was a smaller,
+          genuinely unclaimed piece of it: <code>fd</code> was silently
+          exiting with a success status even when it hit that error, so any
+          script or tool checking fd's exit code had no way of knowing the
+          search hadn't actually finished.
+        </p>
+
+        <h2>The fix</h2>
+        <p>
+          Claude traced the error-handling path through fd's source and found
+          three separate places &mdash; normal output, the <code>--exec</code>
+          flag, and the <code>--exec-batch</code> flag &mdash; where a
+          filesystem error was received but only ever optionally printed,
+          never actually reflected in the program's exit code. All three got
+          fixed to report failure when that happens, even when the error
+          message itself isn't shown.
+        </p>
+
+        <h2>Proving it actually worked</h2>
+        <p>
+          This is the part I paid the most attention to, because it's easy to
+          assume a fix works just because the code reads correctly. Claude
+          built an unpatched and a patched binary side by side and reran the
+          exact failure scenario from the issue against both &mdash; watched
+          the exit code actually flip from success to failure. Then it wrote
+          an automated regression test for the fix, and in doing so caught its
+          own mistake: the test relied on removing read permissions from a
+          directory, but it was running as the root user in its own sandbox,
+          and root ignores permission bits. That made the test pass no matter
+          what it was testing. Claude had to set up a separate,
+          non-privileged user account just to confirm the test genuinely
+          failed against the old code and genuinely passed against the fix.
+          The full test suite, a formatting check, and a linter all came back
+          clean afterward.
+        </p>
+
+        <h2>The line I didn't cross</h2>
+        <p>
+          My first thought was to just have the whole thing pushed for me
+          automatically. That's where I hit a boundary I actually agree with:
+          no AI assistant should ever be handed a raw GitHub token or
+          password, even if I explicitly offer one. The workaround wasn't
+          really a workaround &mdash; Claude prepared the fix as a ready-to-go
+          local repository on my own computer, and I ran the actual
+          <code>git push</code> myself from my own already-authenticated
+          terminal. In hindsight that's obviously how it should work. I don't
+          want to build a habit of handing credentials to a chat window just
+          because it would have been one step faster.
+        </p>
+        <p>
+          The project's own contributing guide reinforced the same idea from
+          another angle: it requires disclosing AI assistance in a pull
+          request description, and requires that the actual human contributor
+          &mdash; not the tool &mdash; understands and can defend the change.
+          That felt right even before I read it. I made a point of
+          understanding every line of the diff before pushing, not just
+          trusting that passing tests meant I was done.
+        </p>
+
+        <h2>Where it landed</h2>
+        <p>
+          The fix is pushed to my fork on a dedicated branch, and I wrote and
+          opened the pull request myself, in my own words, disclosing exactly
+          how Claude was used. Whether it gets merged is now up to the
+          maintainers &mdash; but the process of getting there taught me more
+          than a clean merge would have on its own: how to tell a real bug
+          from a stale label, how to verify a fix instead of trusting it, and
+          where the line sits between using a tool well and outsourcing
+          judgment I should keep for myself.
+        </p>
+      </div>
+    </div>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>&copy; <span id="year"></span> Zeke M. Horton. Built with Claude Code.</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
