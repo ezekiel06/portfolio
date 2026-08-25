@@ -379,3 +379,126 @@ a:focus-visible, button:focus-visible {
   body { background: #fff; color: #000; }
   .band, .record-head { break-inside: avoid; }
 }
+
+/* ==========================================================================
+   Journal
+   --------------------------------------------------------------------------
+   Deliberately NOT reusing .entry for article wrappers: in this stylesheet
+   .entry is a service-record row with a two-column grid, so an article
+   carrying that class would silently inherit a gutter it has no content for.
+   Articles are .post here. This is the selector collision the rest of the
+   file is organised to avoid.
+   ========================================================================== */
+
+.page-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(38px, 6vw, 66px);
+  line-height: 1;
+  letter-spacing: .005em;
+  text-transform: uppercase;
+  margin: 0 0 20px;
+}
+
+/* ---------- journal index ----------------------------------------------- */
+
+.journal-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
+
+.journal-card { border-top: 1px solid var(--rule); }
+.journal-card:last-child { border-bottom: 1px solid var(--rule); }
+
+.journal-card-link {
+  display: block;
+  padding: 28px 0;
+  text-decoration: none;
+  color: var(--ink);
+  transition: background-color .15s;
+}
+.journal-card-link:hover { background: rgba(15, 74, 82, .05); }
+
+.journal-date {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+
+.journal-card-link h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 27px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  line-height: 1.12;
+}
+.journal-card-link p { margin: 0 0 14px; max-width: var(--measure); font-size: 15.5px; }
+.journal-card-link:hover h2 { color: var(--signal); }
+
+.journal-read-more {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+/* ---------- a single entry ---------------------------------------------- */
+
+.post-back {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  margin-bottom: 26px;
+}
+.post-back:hover { color: var(--signal); }
+
+.post h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(34px, 5vw, 54px);
+  line-height: 1.03;
+  letter-spacing: .005em;
+  text-transform: uppercase;
+  margin: 0 0 30px;
+  max-width: 22ch;
+}
+
+.post-body { max-width: var(--measure); }
+.post-body h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 23px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  margin: 38px 0 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.post-body p { margin: 0 0 17px; font-size: 16.5px; }
+.post-body ul { margin: 0 0 17px; padding-left: 20px; }
+.post-body li { margin-bottom: 8px; font-size: 16px; }
+.post-body li::marker { color: var(--rule); }
+
+/* 21 inline <code> spans across the entries; without this they would fall
+   back to the browser default and read as unstyled body text. */
+code {
+  font-family: var(--mono);
+  font-size: .88em;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 1px 5px;
+  word-break: break-word;
+}
+.band-alt code { background: var(--ground); }
