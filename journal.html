@@ -5,33 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Journal | Zeke M. Horton</title>
 <meta name="description" content="Project journal — start-to-finish write-ups of what Zeke Horton built, what broke, and how it got fixed." />
-<link rel="stylesheet" href="styles.css?v=5" />
+<link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
 
-<header class="site-header">
-  <nav class="nav container">
-    <a href="index.html" class="brand">Zeke Horton</a>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+<header class="masthead">
+  <div class="shell masthead-in">
+    <a href="index.html" class="mark">Zeke Horton</a>
+    <button class="menu-btn" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">
       <span></span><span></span><span></span>
     </button>
-    <ul class="nav-links" id="navLinks">
+    <ul class="menu" id="navLinks">
       <li><a href="index.html#about">About</a></li>
       <li><a href="index.html#experience">Experience</a></li>
       <li><a href="index.html#skills">Skills</a></li>
       <li><a href="index.html#education">Education</a></li>
-      <li><a href="journal.html" class="active">Journal</a></li>
+      <li><a href="journal.html">Journal</a></li>
       <li><a href="index.html#contact">Contact</a></li>
     </ul>
-  </nav>
+  </div>
 </header>
 
 <main>
-  <section class="section journal-hero">
-    <div class="container">
-      <p class="eyebrow eyebrow-light">Project Journal</p>
-      <h1 class="journal-title">Start to finish, bugs and all</h1>
-      <p class="lead">
+  <section class="record-head">
+    <div class="shell">
+      <span class="tag">Project Journal</span>
+      <h1 class="page-title">Start to finish, bugs and all</h1>
+      <p class="summary">
         Each entry here covers one project the way it actually happened &mdash;
         the goal, the build, what broke, and how I fixed it. No cleanup, no
         skipped steps.
@@ -39,8 +39,8 @@
     </div>
   </section>
 
-  <section class="section section-alt">
-    <div class="container">
+  <section class="band band-alt">
+    <div class="shell">
       <ul class="journal-list">
         <li class="journal-card">
           <a href="journal-smart-home-os.html" class="journal-card-link">
@@ -90,9 +90,9 @@
   </section>
 </main>
 
-<footer class="site-footer">
-  <div class="container">
-    <p>&copy; <span id="year"></span> Zeke M. Horton. Built with Claude Code.</p>
+<footer class="foot">
+  <div class="shell">
+    <p class="tag">&copy; <span id="year"></span> Zeke M. Horton &middot; Built with Claude Code</p>
   </div>
 </footer>
 
