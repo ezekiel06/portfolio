@@ -363,7 +363,11 @@ a:focus-visible, button:focus-visible {
      collapses to a single column and the date leads the entry instead. */
   .entry { grid-template-columns: 1fr; gap: 0; }
   .entry-meta { text-align: left; margin-bottom: 8px; padding-left: 30px; }
-  .entry-metric { display: inline; margin-left: 12px; }
+  /* Was display:inline here, which let the metric split mid-phrase when it did
+     not fit beside the date -- "98% first / pass", with the orphan hanging under
+     the date. It stays a block on its own line instead: one more line, but it
+     never breaks in the middle of a value. */
+  .entry-metric { margin-top: 4px; }
 
   .idblock div { border-right: none; border-bottom: 1px solid var(--rule); }
   .idblock div:last-child { border-bottom: none; }
