@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Building My Portfolio Site with Claude Code | Zeke M. Horton</title>
+<meta name="description" content="A start-to-finish write-up of building this portfolio site: gathering content, the build, the bugs, and the deployment troubleshooting." />
+<link rel="stylesheet" href="styles-v2.css" />
+</head>
+<body>
+
+<header class="masthead">
+  <div class="shell masthead-in">
+    <a href="index-v2.html" class="mark">Zeke Horton</a>
+    <button class="menu-btn" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="menu" id="navLinks">
+      <li><a href="index-v2.html#about">About</a></li>
+      <li><a href="index-v2.html#experience">Experience</a></li>
+      <li><a href="index-v2.html#skills">Skills</a></li>
+      <li><a href="index-v2.html#education">Education</a></li>
+      <li><a href="journal-v2.html">Journal</a></li>
+      <li><a href="index-v2.html#contact">Contact</a></li>
+    </ul>
+  </div>
+</header>
+
+<main>
+  <article class="band post">
+    <div class="shell">
+      <a href="journal-v2.html" class="post-back">&larr; Back to Journal</a>
+      <p class="journal-date">August 14, 2026</p>
+      <h1>Building My Portfolio Site with Claude Code</h1>
+
+      <div class="post-body">
+        <h2>The goal</h2>
+        <p>
+          I'd just started using the Claude Code CLI and synced my GitHub
+          account, and I wanted a first project to get comfortable with the
+          workflow. A personal portfolio site made sense &mdash; something
+          real, something I'd actually use when applying to Helpdesk and IT
+          Support roles, and small enough to finish without it turning into a
+          slog.
+        </p>
+
+        <h2>Gathering the content</h2>
+        <p>
+          My first instinct was to just hand over my LinkedIn URL and let
+          Claude pull my profile from there. That failed immediately &mdash;
+          the sandboxed environment blocks outbound requests to LinkedIn
+          entirely, and even without that block, LinkedIn requires a login to
+          view a profile, so a plain fetch wouldn't have worked anyway.
+        </p>
+        <p>
+          Instead I exported my resume as a PDF and uploaded it directly.
+          Claude read it and pulled out my experience, skills, and education.
+          Then I uploaded a second file &mdash; the "Save to PDF" export of my
+          actual LinkedIn profile &mdash; which turned out to have a much
+          better About section than my resume's objective statement, plus
+          details my resume didn't have: my Dean's List honor, the home lab I
+          run on a repurposed enterprise server, and the actual bullet points
+          for two jobs my resume had left blank. Both documents got merged
+          into the final content.
+        </p>
+
+        <h2>Building it</h2>
+        <p>
+          We kept the stack simple: plain HTML, CSS, and JavaScript, no build
+          tools. For a resume-style single-page site, that's genuinely all it
+          needed &mdash; a hero section, About, an Experience timeline, Skills
+          &amp; Certifications, Education, and Contact. I picked a new repo
+          instead of reusing the practice repo I'd been using to learn Git, so
+          this one could stay clean and purpose-built.
+        </p>
+
+        <h2>Getting it live wasn't instant</h2>
+        <p>
+          The first real snag had nothing to do with code. Claude's GitHub
+          integration could push commits to a repo it was already attached
+          to, but couldn't create a brand-new repository outright &mdash; that
+          needed a broader permission than the app had. So I created the
+          empty repo myself on GitHub, and from there Claude could attach to
+          it, clone it, and push the site.
+        </p>
+
+        <h2>The bugs I didn't expect</h2>
+        <p>
+          I use dark mode on basically everything, so the first thing I
+          noticed after the site went live was that big chunks of it were
+          unreadable &mdash; my Education heading had vanished, and the skill
+          pills under "Technical Skills" were dark text on a dark background.
+        </p>
+        <p>
+          The cause was the same mistake twice: a couple of CSS rules had
+          colors hardcoded for light mode only, so when the browser was in
+          dark mode those elements never got repainted. One rule forced a
+          white card background no matter what, which made white heading
+          text disappear into it. Another set text to a very dark navy that
+          was never given a dark-mode override, so it read as barely-there
+          text on a near-black background. We fixed both, and when a similar
+          issue showed up a bit later on the "LinkedIn" button in the Contact
+          section &mdash; same root cause, different element &mdash; we caught
+          and fixed that one too.
+        </p>
+
+        <h2>The deployment that looked stuck</h2>
+        <p>
+          After one of the CSS fixes, I reloaded the live site and it looked
+          completely unchanged. My first guess was browser cache, but even
+          after checking that, the bug was still there. Instead of guessing
+          again, Claude pulled the actual deployment history straight from
+          GitHub's API and found the real problem: GitHub Pages had rebuilt
+          the site twice, but both builds were pinned to my very first commit
+          &mdash; the fix commit had never triggered a new deployment at all.
+          A fresh push kicked off a new build, and to stop it from happening
+          again silently, we added a version query string to the stylesheet
+          link so the browser is forced to fetch the latest CSS every time it
+          changes, cache or no cache.
+        </p>
+
+        <h2>Catching my own mistake</h2>
+        <p>
+          Once the site was stable, I did the math on my own stats out of
+          curiosity: 60 calls a day at a 15-minute average handle time is 15
+          hours of call-handling in an 8-hour shift. That obviously doesn't
+          fit. Rather than quietly dropping the number, we reworded it to
+          "calls managed in queue per day" &mdash; which is what that stat
+          actually represented &mdash; so the numbers on the page hold up to
+          the same scrutiny I'd want from a support ticket.
+        </p>
+
+        <h2>Where it landed</h2>
+        <p>
+          The finished site is live on GitHub Pages, responsive, readable in
+          both light and dark mode, and pulls from real experience instead of
+          filler text. More importantly, building it was its own small
+          exercise in the kind of work I actually want to do: something broke,
+          I didn't have the answer yet, and I dug in until I did.
+        </p>
+      </div>
+    </div>
+  </article>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p class="tag">&copy; <span id="year"></span> Zeke M. Horton &middot; Built with Claude Code</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

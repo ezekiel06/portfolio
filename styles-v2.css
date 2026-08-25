@@ -1,0 +1,504 @@
+/* ==========================================================================
+   Zeke M. Horton — readiness board
+   --------------------------------------------------------------------------
+   The through-line across every role here is one act: watch a system, catch
+   the fault, fix it, log it. Mortar readiness, production line monitoring,
+   NVR monitoring, dealer diagnostics, programming validation. The metrics are
+   operational -- first call resolution, average handle time, queue depth,
+   first-pass yield -- so the page is built as a service record and a readout,
+   not a developer folio.
+
+   Three faces, three jobs, never interchangeable:
+     display  Saira Condensed  headings and the name. Engineered, condensed --
+                               a different silhouette from the body face, not
+                               just a heavier weight of it.
+     body     Public Sans      the U.S. Web Design System face. Holds up at
+                               small sizes across dense bullets.
+     mono     IBM Plex Mono    data only: dates, metrics, labels, status.
+   ========================================================================== */
+
+:root {
+  --ground:    #e9e7e1;  /* warm grey stock, deliberately not cream-white */
+  --ground-2:  #dfdcd4;  /* alternating sections */
+  --panel:     #f3f1ec;  /* raised surfaces */
+  --ink:       #15181b;
+  --ink-soft:  #4b525c;
+  --rule:      #c4c0b7;
+  --signal:    #0f4a52;  /* instrument teal */
+  --signal-lo: #d8e3e3;
+  --alert:     #854c0d;  /* amber, metrics only. Darkened until it clears AA (4.5:1)
+                            against the ALTERNATING band too, not just --ground:
+                            .entry-metric is 13px normal text on --ground-2, where
+                            the first pick measured 4.45 and failed. Now 5.05. */
+
+  --display: "Saira Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+
+  --measure: 68ch;
+  --gutter: 150px;
+  --shell: 1080px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 28px; }
+
+a { color: var(--signal); }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+/* Every label, date, metric and status marker on the page. Letterspaced
+   uppercase mono is the one consistent signal that a thing is data. */
+.tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* ---------- header ------------------------------------------------------ */
+
+.masthead {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--ground);
+  border-bottom: 1px solid var(--rule);
+}
+.masthead-in { display: flex; align-items: center; gap: 20px; height: 62px; }
+
+.mark {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.menu { margin-left: auto; display: flex; gap: 26px; list-style: none; padding: 0; }
+.menu a {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+}
+.menu a:hover { color: var(--ink); border-bottom-color: var(--signal); }
+
+.menu-btn {
+  display: none; margin-left: auto;
+  background: none; border: 1px solid var(--rule); border-radius: 2px;
+  padding: 9px 10px; cursor: pointer;
+}
+.menu-btn span { display: block; width: 18px; height: 2px; background: var(--ink); }
+.menu-btn span + span { margin-top: 4px; }
+
+/* ---------- masthead block (hero) --------------------------------------- */
+
+.record-head { padding: 72px 0 56px; border-bottom: 1px solid var(--rule); }
+
+.record-head .tag { display: block; margin-bottom: 20px; color: var(--signal); }
+
+.name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(52px, 9vw, 104px);
+  line-height: .92;
+  letter-spacing: -.005em;
+  text-transform: uppercase;
+  margin: 0 0 22px;
+}
+.name span { display: block; }
+
+.summary {
+  font-size: 18px;
+  line-height: 1.55;
+  max-width: 54ch;
+  margin: 0 0 30px;
+  color: var(--ink);
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
+
+.btn {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 13px 22px;
+  border-radius: 2px;
+  text-decoration: none;
+  border: 1px solid var(--signal);
+  transition: background-color .15s, color .15s;
+}
+.btn-solid { background: var(--signal); color: var(--panel); }
+.btn-solid:hover { background: var(--ink); border-color: var(--ink); }
+.btn-line { background: transparent; color: var(--signal); }
+.btn-line:hover { background: var(--signal-lo); }
+
+/* The ID block. Equipment and units carry one; so does a service record.
+   Key/value in mono, ruled, scanning top-to-bottom in one pass. */
+.idblock {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  border-top: 1px solid var(--rule);
+}
+.idblock div { padding: 16px 20px 16px 0; border-right: 1px solid var(--rule); }
+.idblock div:last-child { border-right: none; }
+.idblock dt { margin: 0 0 6px; }
+.idblock dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 500;
+  word-break: break-word;
+}
+.idblock a { text-decoration: none; border-bottom: 1px solid var(--rule); }
+.idblock a:hover { border-bottom-color: var(--signal); }
+
+/* ---------- sections ---------------------------------------------------- */
+
+.band { padding: 64px 0; border-bottom: 1px solid var(--rule); }
+.band-alt { background: var(--ground-2); }
+
+.band-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+.band-rule { height: 3px; background: var(--ink); width: 46px; margin-bottom: 30px; }
+
+.prose { max-width: var(--measure); font-size: 16.5px; }
+.prose p { margin: 0 0 18px; }
+
+.subhead {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  margin: 40px 0 14px;
+}
+
+/* ---------- readout (the four operational metrics) ---------------------- */
+/* Not four bordered cards with centred numbers -- that shape is on every
+   portfolio. A ruled readout, left-aligned, label above value. */
+
+.readout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0;
+  margin: 34px 0 8px;
+}
+.readout div {
+  border-top: 3px solid var(--ink);
+  padding: 14px 18px 4px 0;
+}
+.readout .val {
+  display: block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: .01em;
+  color: var(--alert);
+  margin-top: 10px;
+}
+
+.note {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 26px;
+}
+
+/* ---------- tag lists --------------------------------------------------- */
+
+.tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.tags li {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .03em;
+  padding: 7px 11px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.band-alt .tags li { background: var(--ground); }
+
+/* ---------- the service record ------------------------------------------ */
+/* One continuous rule from 2008 to now. The chronology is the structure:
+   order genuinely carries information here, so it is not decoration. Each
+   entry's hardest number is pulled into the mono gutter beside it. */
+
+.record { list-style: none; padding: 0; margin: 0; }
+
+.entry {
+  display: grid;
+  grid-template-columns: var(--gutter) 1fr;
+  gap: 0 30px;
+}
+.entry-meta { padding-top: 2px; text-align: right; }
+.entry-metric {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--alert);
+  margin-top: 8px;
+  line-height: 1.35;
+}
+
+.entry-body {
+  position: relative;
+  border-left: 1px solid var(--rule);
+  padding: 0 0 44px 30px;
+}
+.entry:last-child .entry-body { border-left-color: transparent; padding-bottom: 0; }
+
+/* Square marker, not a dot -- it reads as a station on a line rather than a
+   bullet, and it sits on the rule instead of beside it. */
+.entry-body::before {
+  content: "";
+  position: absolute;
+  left: -5px; top: 4px;
+  width: 9px; height: 9px;
+  background: var(--signal);
+}
+
+.entry-role {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 25px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  margin: 0 0 2px;
+  line-height: 1.15;
+}
+.entry-org { font-size: 14px; color: var(--ink-soft); margin: 0 0 14px; font-weight: 500; }
+.entry-body ul { margin: 0; padding-left: 18px; }
+.entry-body li { margin-bottom: 7px; font-size: 15.5px; }
+.entry-body li::marker { color: var(--rule); }
+
+/* ---------- cards ------------------------------------------------------- */
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--signal);
+  border-radius: 2px;
+  padding: 20px 22px;
+}
+.band-alt .card { background: var(--ground); }
+.card h4, .card h3 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+.card p { margin: 4px 0 0; font-size: 14.5px; color: var(--ink-soft); }
+
+/* ---------- closing ----------------------------------------------------- */
+
+.closing { background: var(--signal); color: var(--panel); padding: 72px 0; }
+.closing .band-title { color: var(--panel); }
+.closing .band-rule { background: var(--panel); }
+.closing .prose { color: var(--signal-lo); }
+.closing .btn-solid { background: var(--panel); color: var(--signal); border-color: var(--panel); }
+.closing .btn-solid:hover { background: var(--ground); }
+.closing .btn-line { color: var(--panel); border-color: var(--panel); }
+.closing .btn-line:hover { background: rgba(255, 255, 255, .12); }
+
+.foot { padding: 26px 0; }
+.foot p { margin: 0; }
+
+/* ---------- responsive -------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .menu-btn { display: block; }
+  .menu {
+    display: none;
+    position: absolute; left: 0; right: 0; top: 62px;
+    flex-direction: column; gap: 0;
+    background: var(--ground);
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 28px 18px;
+  }
+  .menu.open { display: flex; }
+  .menu a { display: block; padding: 11px 0; }
+
+  /* The gutter cannot hold a date column at this width, so the record
+     collapses to a single column and the date leads the entry instead. */
+  .entry { grid-template-columns: 1fr; gap: 0; }
+  .entry-meta { text-align: left; margin-bottom: 8px; padding-left: 30px; }
+  .entry-metric { display: inline; margin-left: 12px; }
+
+  .idblock div { border-right: none; border-bottom: 1px solid var(--rule); }
+  .idblock div:last-child { border-bottom: none; }
+
+  .readout div { padding-right: 0; }
+  .readout .val { font-size: 38px; }
+  .band { padding: 48px 0; }
+  .record-head { padding: 48px 0 40px; }
+}
+
+@media print {
+  .masthead, .actions, .closing .btn { display: none; }
+  body { background: #fff; color: #000; }
+  .band, .record-head { break-inside: avoid; }
+}
+
+/* ==========================================================================
+   Journal
+   --------------------------------------------------------------------------
+   Deliberately NOT reusing .entry for article wrappers: in this stylesheet
+   .entry is a service-record row with a two-column grid, so an article
+   carrying that class would silently inherit a gutter it has no content for.
+   Articles are .post here. This is the selector collision the rest of the
+   file is organised to avoid.
+   ========================================================================== */
+
+.page-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(38px, 6vw, 66px);
+  line-height: 1;
+  letter-spacing: .005em;
+  text-transform: uppercase;
+  margin: 0 0 20px;
+}
+
+/* ---------- journal index ----------------------------------------------- */
+
+.journal-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
+
+.journal-card { border-top: 1px solid var(--rule); }
+.journal-card:last-child { border-bottom: 1px solid var(--rule); }
+
+.journal-card-link {
+  display: block;
+  padding: 28px 0;
+  text-decoration: none;
+  color: var(--ink);
+  transition: background-color .15s;
+}
+.journal-card-link:hover { background: rgba(15, 74, 82, .05); }
+
+.journal-date {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+
+.journal-card-link h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 27px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  line-height: 1.12;
+}
+.journal-card-link p { margin: 0 0 14px; max-width: var(--measure); font-size: 15.5px; }
+.journal-card-link:hover h2 { color: var(--signal); }
+
+.journal-read-more {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+/* ---------- a single entry ---------------------------------------------- */
+
+.post-back {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  margin-bottom: 26px;
+}
+.post-back:hover { color: var(--signal); }
+
+.post h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(34px, 5vw, 54px);
+  line-height: 1.03;
+  letter-spacing: .005em;
+  text-transform: uppercase;
+  margin: 0 0 30px;
+  max-width: 22ch;
+}
+
+.post-body { max-width: var(--measure); }
+.post-body h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 23px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  margin: 38px 0 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.post-body p { margin: 0 0 17px; font-size: 16.5px; }
+.post-body ul { margin: 0 0 17px; padding-left: 20px; }
+.post-body li { margin-bottom: 8px; font-size: 16px; }
+.post-body li::marker { color: var(--rule); }
+
+/* 21 inline <code> spans across the entries; without this they would fall
+   back to the browser default and read as unstyled body text. */
+code {
+  font-family: var(--mono);
+  font-size: .88em;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 1px 5px;
+  word-break: break-word;
+}
+.band-alt code { background: var(--ground); }
