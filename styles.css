@@ -506,3 +506,92 @@ code {
   word-break: break-word;
 }
 .band-alt code { background: var(--ground); }
+
+/* ---------- code listings inside an entry -------------------------------
+   Added for the retry/navigation-race entry, the first one carrying real
+   code blocks rather than inline spans. Deliberately built from parts the
+   rest of the sheet already uses, so a listing reads as another instrument
+   on the page and not as an embedded gist:
+     - --panel ground and --rule border, same as inline <code>
+     - the --signal left edge that marks a readout everywhere else
+     - the mono uppercase label strip used for every date, metric and status
+   .listing-bad carries --alert, which on this site is reserved for the one
+   figure that matters in an entry. Here it marks the single line the entry
+   is about, so the colour keeps meaning something.
+   ------------------------------------------------------------------------ */
+figure.listing { margin: 0 0 22px; }
+
+.listing-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 0 0 7px 14px;
+}
+.listing-label .listing-bad { color: var(--alert); }
+.listing-label .listing-ok  { color: var(--signal); }
+
+pre {
+  margin: 0;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--signal);
+  border-radius: 2px;
+  padding: 15px 0;
+  overflow-x: auto;               /* long lines scroll here, never the page */
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.72;
+  tab-size: 2;
+}
+/* The inline <code> rule above would otherwise box every line inside a
+   listing. Unset it rather than fighting it with specificity. */
+pre code {
+  display: block;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0 18px;
+  font-size: inherit;
+  word-break: normal;
+}
+.band-alt pre { background: var(--ground); }
+
+pre .bad {
+  display: block;
+  background: rgba(133, 76, 13, .10);
+  box-shadow: inset 2px 0 0 var(--alert);
+  color: var(--alert);
+}
+pre .cmt { color: var(--ink-soft); }
+
+/* ---------- pull quote --------------------------------------------------- */
+.pull {
+  margin: 26px 0;
+  padding: 4px 0 4px 20px;
+  border-left: 2px solid var(--signal);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1.18;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+/* ---------- source note at the foot of an entry -------------------------- */
+.post-foot {
+  max-width: var(--measure);
+  margin-top: 44px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 620px) {
+  pre { font-size: 12.5px; }
+  .pull { font-size: 21px; }
+}

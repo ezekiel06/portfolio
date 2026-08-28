@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Retries Are Hiding a Navigation Race | Zeke M. Horton</title>
+<meta name="description" content="A passing test suite that quietly burns a retry on the same step every run is not a flaky environment — it is a race condition with a bandage on it. How waitForLoadState after a click does nothing, why retries hid it, and the error-classification bug underneath." />
+<link rel="stylesheet" href="styles.css?v=7" />
+</head>
+<body>
+
+<header class="masthead">
+  <div class="shell masthead-in">
+    <a href="index.html" class="mark">Zeke Horton</a>
+    <button class="menu-btn" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="menu" id="navLinks">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#skills">Skills</a></li>
+      <li><a href="index.html#education">Education</a></li>
+      <li><a href="journal.html">Journal</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </div>
+</header>
+
+<main>
+  <article class="band post">
+    <div class="shell">
+      <a href="journal.html" class="post-back">&larr; Back to Journal</a>
+      <p class="journal-date">August 28, 2026</p>
+      <h1>Your retries are hiding a navigation race</h1>
+
+      <div class="post-body">
+        <p>
+          There is a specific kind of broken test suite that never shows up as
+          broken. It passes. CI is green. But nearly every run quietly burns a
+          retry on the same step, and the reason it needs that retry is a real
+          race condition that will eventually bite you somewhere retries cannot
+          save you &mdash; a duplicate write, a double-charged customer, a job
+          that reports success having done half the work.
+        </p>
+        <p>
+          I hit this building a demo harness for exactly this class of problem.
+          The bug is small, the cause is genuinely non-obvious, and the reason
+          it stayed invisible is the interesting part.
+        </p>
+
+        <h2>The setup</h2>
+        <p>A page with a button. Click it, and the page does this:</p>
+
+        <figure class="listing">
+          <div class="listing-label">Target &mdash; the page under automation</div>
+          <pre><code>fetch("/process/" + id, { method: "POST" })
+  .then(function (r) { if (r.ok) location.reload(); });</code></pre>
+        </figure>
+
+        <p>
+          This is an extremely common pattern &mdash; post an action, reload to
+          show the new state. No framework, no client-side router, just a POST
+          and a reload.
+        </p>
+        <p>
+          The automation drives it in a loop: read how many items remain, click
+          the button, wait for the page, read again. The obvious code looks like
+          this:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Runner &mdash; <span class="listing-bad">the wrong version</span></div>
+          <pre><code>await page.locator("button.process").click();
+<span class="bad">await page.waitForLoadState("domcontentloaded");   // this line is the bug</span>
+const text = await page.locator("#status").innerText();</code></pre>
+        </figure>
+
+        <p>
+          That middle line is wrong, and it is wrong in a way that reads as
+          correct.
+        </p>
+
+        <h2>Why it is wrong</h2>
+        <p>
+          <code>waitForLoadState("domcontentloaded")</code> does not wait for the
+          <em>next</em> navigation. It waits for the <em>current</em> page to have
+          reached that state &mdash; and the current page reached it a long time
+          ago. The promise is already satisfied at the moment you call it.
+        </p>
+        <p>So the real sequence is:</p>
+        <ul>
+          <li>Click fires. The handler calls <code>fetch()</code>. The request is in flight.</li>
+          <li><code>waitForLoadState("domcontentloaded")</code> resolves <strong>immediately</strong>, against the old page.</li>
+          <li>Your next line reads <code>#status</code> &mdash; still the old page, or worse, mid-teardown.</li>
+          <li><em>Then</em> the fetch resolves and <code>location.reload()</code> finally starts.</li>
+        </ul>
+        <p>
+          The line you added to make the code safe is a no-op. Worse than a
+          no-op: it is a comment that lies. Anyone reading it &mdash; including
+          you in three months &mdash; sees a wait and assumes the navigation is
+          handled.
+        </p>
+        <p>
+          What you actually get is a read racing a navigation that has not
+          started yet. Sometimes the read lands on stale content. Sometimes it
+          lands mid-navigation and throws
+          <code>Execution context was destroyed</code> or
+          <code>frame was detached</code>.
+        </p>
+
+        <h2>Why nobody noticed</h2>
+        <p>
+          Because the step was wrapped in a retry with backoff, like every other
+          step.
+        </p>
+        <p>
+          Attempt 1 throws. The runner logs a warning, sleeps 400ms, tries again.
+          By attempt 2 the reload has long since finished, the page is stable,
+          the read succeeds. The step passes. The loop continues. The run exits
+          <code>0</code>.
+        </p>
+
+        <p class="pull">A retry that turns a red into a green is a bug report you threw away.</p>
+
+        <p>
+          The information was there &mdash; in the retry counter, in a log line
+          nobody reads, in a run that took noticeably longer than it should have.
+          But the only signal the suite emits is pass/fail, and it said pass.
+        </p>
+        <p>
+          This is the actual failure mode of defensive retry logic. It does not
+          hide <em>flakiness</em>, it hides <em>causes</em>. The flakiness is
+          still there. You have just removed your ability to find out why.
+        </p>
+
+        <h2>The fix</h2>
+        <p>
+          Do not wait for a lifecycle event. Wait for the postcondition that
+          means the work actually happened:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Runner &mdash; <span class="listing-ok">wait on the postcondition</span></div>
+          <pre><code>const before = await page.locator("#status").innerText();
+await page.locator("button.process").first().click();
+
+await page.waitForFunction(
+  (prev) =&gt; {
+    <span class="cmt">// session died; let the caller handle it</span>
+    if (document.querySelector("#signin")) return true;
+    const el = document.querySelector("#status");
+    return !!el &amp;&amp; el.innerText !== prev;
+  },
+  before,
+  { timeout: 8_000 }
+);</code></pre>
+        </figure>
+
+        <p>
+          Capture the state before the action, then wait for it to change. This
+          is correct regardless of <em>how</em> the page updates &mdash; reload,
+          <code>fetch</code> plus DOM patch, client-side route, WebSocket push.
+          It does not care. It waits for evidence that the thing you asked for
+          happened.
+        </p>
+        <p>
+          Lifecycle events describe what the browser is doing. Postconditions
+          describe what your job needs. Those are different questions, and most
+          wait bugs come from answering the first when you meant to ask the
+          second.
+        </p>
+        <p>
+          The <code>#signin</code> short-circuit is worth a note. If the session
+          expired, the click bounced you to a login page and <code>#status</code>
+          will <em>never</em> change. Without that check you sit there until the
+          timeout, then burn the whole retry budget on a condition the
+          surrounding loop already knows how to fix. Bail out in one attempt and
+          let the caller re-authenticate.
+        </p>
+
+        <h2>The second bug hiding behind the first</h2>
+        <p>
+          Once the race was fixed, a different lie surfaced. The run started
+          reporting <strong>"target unreachable"</strong> after every
+          <em>successful</em> item.
+        </p>
+        <p>The classifier looked reasonable:</p>
+
+        <figure class="listing">
+          <div class="listing-label">Classify &mdash; <span class="listing-bad">reasonable, and wrong</span></div>
+          <pre><code>function isConnectionError(err) {
+  return CONNECTION_ERRORS.some((code) =&gt; String(err.message).includes(code));
+}</code></pre>
+        </figure>
+
+        <p>
+          The problem: when a page calls <code>location.reload()</code> on
+          itself, any navigation you had in flight is aborted, and Playwright
+          reports <code>ERR_ABORTED</code>. That looks like a network error. It
+          is not one. It is the page doing exactly what it was built to do.
+        </p>
+        <p>
+          So a healthy run was declaring an outage on every success &mdash; and
+          because the supervisor's job was to restart on outages, a working
+          system was being restarted for working.
+        </p>
+        <p>
+          The fix is to name the benign cases explicitly rather than letting them
+          fall through:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Classify &mdash; <span class="listing-ok">benign cases named</span></div>
+          <pre><code>const NOT_AN_OUTAGE = [
+  "ERR_ABORTED",                    <span class="cmt">// navigation cancelled, usually by the page itself</span>
+  "Navigation interrupted",
+  "frame was detached",
+  "Target closed",
+  "Execution context was destroyed",
+];
+
+function isConnectionError(err) {
+  const msg = String((err &amp;&amp; err.message) || err || "");
+  if (!msg) return false;
+  if (NOT_AN_OUTAGE.some((s) =&gt; msg.includes(s))) return false;
+  return CONNECTION_ERRORS.some((code) =&gt; msg.includes(code));
+}</code></pre>
+        </figure>
+
+        <p>
+          An explicit deny-list beats "it was not in the allow-list, so it is
+          fine." The next person to extend <code>CONNECTION_ERRORS</code>
+          carelessly gets caught by the deny-list instead of silently
+          reintroducing the bug.
+        </p>
+        <p>
+          And when you unit-test this, <strong>the negative cases are the ones
+          that matter</strong>. Any implementation returns <code>true</code> for
+          <code>ECONNREFUSED</code>. The bug was returning <code>true</code> for
+          an aborted navigation. That is the test that would have caught it.
+        </p>
+
+        <h2>How to tell if your suite has this</h2>
+        <p>Three cheap checks:</p>
+        <ul>
+          <li>
+            <strong>Count retries, not just failures.</strong> If a step passes
+            on attempt 2 more than very rarely, you do not have a flaky
+            environment &mdash; you have a race with a bandage on it. Emit the
+            attempt count as a metric and put a threshold on it.
+          </li>
+          <li>
+            <strong>Grep for <code>waitForLoadState</code> immediately after a
+            click.</strong> Every instance is suspect. If the click triggers an
+            async action that navigates later, the wait is a no-op.
+          </li>
+          <li>
+            <strong>Run once with retries disabled.</strong> Whatever fails is
+            what your retry logic has been paying for. That list is usually
+            shorter and more interesting than people expect.
+          </li>
+        </ul>
+
+        <h2>The general shape</h2>
+        <p>
+          Retries are for things that are genuinely transient and outside your
+          control: a dropped socket, a rate limit, a cold cache. They are not a
+          substitute for knowing when your work is done.
+        </p>
+        <p>
+          Every retry added without understanding what it catches converts a
+          loud, cheap, reproducible failure into a quiet, expensive,
+          intermittent one. The suite gets greener and the system gets less
+          knowable. Eventually something breaks in production, and the test
+          suite &mdash; which has been silently failing and recovering for
+          months &mdash; has nothing to tell you.
+        </p>
+        <p>Wait on postconditions. Classify errors honestly. Count your retries.</p>
+      </div>
+
+      <p class="post-foot">
+        The code above is from
+        <a href="https://github.com/ezekiel06/longhaul">longhaul</a>, a small
+        public repo pairing a server that injects faults on purpose with a runner
+        that completes the job anyway. Both bugs described here were real, found
+        while building it.
+      </p>
+    </div>
+  </article>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p class="tag">&copy; <span id="year"></span> Zeke M. Horton &middot; Built with Claude Code</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

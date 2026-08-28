@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Journal | Zeke M. Horton</title>
 <meta name="description" content="Project journal — start-to-finish write-ups of what Zeke Horton built, what broke, and how it got fixed." />
-<link rel="stylesheet" href="styles.css?v=6" />
+<link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
 
@@ -42,6 +42,21 @@
   <section class="band band-alt">
     <div class="shell">
       <ul class="journal-list">
+        <li class="journal-card">
+          <a href="journal-retry-navigation-race.html" class="journal-card-link">
+            <span class="journal-date">August 28, 2026</span>
+            <h2>Your Retries Are Hiding a Navigation Race</h2>
+            <p>
+              A test suite that passes but quietly burns a retry on the same
+              step every run is not a flaky environment &mdash; it is a race
+              condition with a bandage on it. Why waiting on a load event after
+              a click does nothing at all, how the retry wrapper turned that
+              into a green run, and the second bug underneath it that made a
+              healthy system report an outage after every success.
+            </p>
+            <span class="journal-read-more">Read entry &rarr;</span>
+          </a>
+        </li>
         <li class="journal-card">
           <a href="journal-smart-home-os.html" class="journal-card-link">
             <span class="journal-date">August 18, 2026</span>
