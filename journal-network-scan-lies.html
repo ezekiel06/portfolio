@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Ping Sweep Is Lying About What's on the Network | Zeke M. Horton</title>
+<meta name="description" content="Windows blocks ping by default, so a ping sweep silently omits the machines you most need to find. That, a subnet mask built from a literal PowerShell reads as -1, and two more ways a network inventory reports confidently wrong answers." />
+<link rel="stylesheet" href="styles.css?v=7" />
+</head>
+<body>
+
+<header class="masthead">
+  <div class="shell masthead-in">
+    <a href="index.html" class="mark">Zeke Horton</a>
+    <button class="menu-btn" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="menu" id="navLinks">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#skills">Skills</a></li>
+      <li><a href="index.html#education">Education</a></li>
+      <li><a href="journal.html">Journal</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </div>
+</header>
+
+<main>
+  <article class="band post">
+    <div class="shell">
+      <a href="journal.html" class="post-back">&larr; Back to Journal</a>
+      <p class="journal-date">August 30, 2026</p>
+      <h1>Your ping sweep is lying about what's on the network</h1>
+
+      <div class="post-body">
+        <p>
+          A tool that crashes is annoying. A tool that returns a confident,
+          plausible, wrong answer is dangerous, because somebody acts on it.
+          Network inventory is squarely in the second category: the entire point
+          is to tell a client what exists on their network, and the output only
+          has value if it can be trusted.
+        </p>
+        <p>
+          I built one &mdash; a PowerShell tool that sweeps an authorized range,
+          cross-references what it finds against Active Directory, and reports
+          the gap. Devices answering on the wire with no AD account. AD accounts
+          for machines that no longer exist. Accounts that were disabled on
+          paper but are still running.
+        </p>
+        <p>
+          Four separate bugs during that build made it quietly wrong. None of
+          them threw an exception. Every one produced output that looked
+          completely reasonable.
+        </p>
+
+        <h2>Lie one: the sweep skips the machines you care about</h2>
+        <p>The obvious way to find live hosts is the one everyone writes first:</p>
+
+        <figure class="listing">
+          <div class="listing-label">Discovery &mdash; <span class="listing-bad">the version that under-reports</span></div>
+          <pre><code>foreach ($ip in $addresses) {
+<span class="bad">    if (Test-Connection $ip -Count 1 -Quiet) { $live += $ip }</span>}</code></pre>
+        </figure>
+
+        <p>
+          This is wrong on a corporate network, and it is wrong in the worst
+          possible direction. <strong>Windows Firewall blocks inbound ICMP echo
+          by default on the Domain profile.</strong> A domain-joined workstation
+          sitting right there, powered on, logged in, will not answer a ping.
+        </p>
+        <p>
+          So the sweep comes back, reports thirty devices on a network that has
+          sixty, and reports it without a warning, without an error, without any
+          indication that half the estate declined to respond. The missing
+          machines are not flagged as missing. They were never candidates.
+        </p>
+        <p>
+          The fix is to treat silence as unproven rather than as absence, and
+          re-probe every non-responder over TCP:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Discovery &mdash; <span class="listing-ok">silence is not evidence</span></div>
+          <pre><code>$silent = $addresses | Where-Object { -not $live.ContainsKey($_) }
+
+foreach ($ip in $silent) {
+    <span class="cmt"># any answer here means the host is alive</span>
+    foreach ($port in @(445, 135, 3389, 80, 22)) {
+        if (Test-TcpPort -ComputerName $ip -Port $port) {
+            $live[$ip] = "TCP/$port"
+            break
+        }
+    }
+}</code></pre>
+        </figure>
+
+        <p>
+          A host that refuses ICMP but accepts a connection on 445 is not
+          ambiguous. It is a Windows machine with its firewall configured the
+          way Microsoft ships it.
+        </p>
+
+        <p class="pull">An inventory that silently omits half the estate is worse than no inventory, because someone will trust it.</p>
+
+        <h2>Lie two: the subnet math was garbage, silently</h2>
+        <p>
+          To scan a CIDR range you need a netmask. The standard way to build one
+          is to take all ones and shift:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Subnet mask &mdash; <span class="listing-bad">correct in most languages, not this one</span></div>
+          <pre><code><span class="bad">$mask = [uint32](0xFFFFFFFF -shl (32 - $prefix))</span></code></pre>
+        </figure>
+
+        <p>
+          PowerShell parses the literal <code>0xFFFFFFFF</code> as a signed
+          32-bit integer. It is not 4294967295. It is <code>-1</code>:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">What the console actually says</div>
+          <pre><code>PS&gt; 0xFFFFFFFF
+-1
+
+PS&gt; [uint32]0xFFFFFFFF
+Cannot convert value "-1" to type "System.UInt32".
+Error: "Value was too large or too small for a UInt32."</code></pre>
+        </figure>
+
+        <p>
+          Every mask built from that literal was wrong, which meant every
+          network address, every broadcast address, and every enumerated host
+          range was wrong. There is a second trap stacked underneath it:
+          shifting a 32-bit value by 32 is undefined, so a <code>/0</code> wraps
+          around to all ones instead of collapsing to zero.
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Subnet mask &mdash; <span class="listing-ok">widen first, then truncate</span></div>
+          <pre><code>$allOnes = 0xFFFFFFFFL   <span class="cmt"># L forces Int64, not -1</span>
+$mask    = [uint32](($allOnes -shl (32 - $prefix)) -band $allOnes)</code></pre>
+        </figure>
+
+        <p>
+          I only found this because I installed PowerShell and ran the module
+          before building anything on top of it. Had I trusted it and moved on,
+          the failure would have surfaced later as "the scan found fewer
+          machines than expected" &mdash; which is indistinguishable from lie
+          one, and would have sent me hunting in completely the wrong place.
+        </p>
+
+        <h2>Lie three: every machine was both missing and unaccounted for</h2>
+        <p>
+          Reconciliation means matching a discovered device to its AD computer
+          object. Both sides have a name, so:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Matching &mdash; <span class="listing-bad">never true, not once</span></div>
+          <pre><code><span class="bad">if ($device.HostName -eq $adComputer.Name) { ... }</span>
+<span class="cmt"># reverse DNS returns:  "wks-014.corp.local."</span>
+<span class="cmt"># Active Directory returns:  "WKS-014"</span></code></pre>
+        </figure>
+
+        <p>
+          Different case, a domain suffix on one side, and a trailing dot from
+          the fully qualified DNS answer. The comparison never matched, so every
+          single machine was classified twice: once as a device on the network
+          with no AD account, and again as an AD account for a machine that
+          could not be found.
+        </p>
+        <p>
+          The report was internally consistent, fully populated, and completely
+          false. Normalising both sides to a comparable short name fixes it:
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Matching &mdash; <span class="listing-ok">normalise both sides first</span></div>
+          <pre><code>function Get-ComparableName {
+    param([string]$Name)
+    if ([string]::IsNullOrWhiteSpace($Name)) { return $null }
+    return ($Name.TrimEnd('.') -split '\.')[0].ToUpperInvariant()
+}</code></pre>
+        </figure>
+
+        <p>
+          Worth noting what happens when a device has no reverse DNS entry at
+          all. It cannot be matched to anything, ever, so it has to fall through
+          to "unaccounted for" rather than crash or get silently dropped. That
+          is a legitimate finding, not an error &mdash; a device nobody can name
+          is exactly the kind of thing this tool exists to surface.
+        </p>
+
+        <h2>Lie four: the one the tests could not see</h2>
+        <p>
+          The suite is 72 tests. It covers the subnet math, the authorization
+          boundary, every reconciliation path, and HTML escaping. All green.
+        </p>
+        <p>
+          Then somebody looked at the report and asked why the text on the right
+          was cut off.
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Report CSS &mdash; <span class="listing-bad">right rule, wrong scope</span></div>
+          <pre><code><span class="bad">td.mono { font-family: ui-monospace; white-space: nowrap; }</span></code></pre>
+        </figure>
+
+        <p>
+          <code>nowrap</code> is correct for an IP address or a MAC &mdash; those
+          must never break mid-value. I applied it to every monospace cell,
+          including the open-ports column, which holds things like
+          <code>80/HTTP, 443/HTTPS, 515/LPD, 9100/JetDirect</code>. Forced onto
+          one line, that column shoved the table past its container and pushed
+          the final <strong>Status</strong> column &mdash; the one carrying the
+          actual finding for each device &mdash; off the right edge entirely.
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Report CSS &mdash; <span class="listing-ok">nowrap only where a value is atomic</span></div>
+          <pre><code>td.mono {
+    white-space: nowrap;      <span class="cmt">/* IP, MAC: never break */</span>
+}
+td.ports {
+    white-space: normal;      <span class="cmt">/* a list wraps like a list */</span>
+    overflow-wrap: anywhere;
+    max-width: 230px;
+}</code></pre>
+        </figure>
+
+        <p>
+          No test caught this and no reasonable test would have. The tests
+          assert what is <em>in</em> the document: the right rows, the right
+          values, hostile input escaped rather than rendered. Layout is what the
+          browser does with that document afterwards, and asserting on it means
+          asserting on rendered pixels.
+        </p>
+        <p>
+          The check that found it was rendering the page headless and looking at
+          the image. That is worth building into the loop for anything that
+          produces a visual artifact, precisely because it catches the class of
+          bug that structural assertions cannot reach.
+        </p>
+
+        <h2>The thing I got right on purpose</h2>
+        <p>
+          One decision was made before any of that, and it is the one I would
+          defend hardest: the scope check fails closed.
+        </p>
+
+        <figure class="listing">
+          <div class="listing-label">Authorization &mdash; an empty list authorizes nothing</div>
+          <pre><code>if ($null -eq $AuthorizedScopes -or
+    $AuthorizedScopes.Count -eq 0) {
+    return $false
+}</code></pre>
+        </figure>
+
+        <p>
+          Every target range is checked against an explicit authorized list
+          before a single packet is sent. An unconfigured tool scans nothing
+          rather than everything. A range that only partially overlaps an
+          authorized scope is refused outright rather than quietly clipped to
+          the permitted half. And a hard cap on how many addresses one scope may
+          expand to turns a <code>/8</code>-instead-of-<code>/24</code> typo into
+          an error message rather than a sixteen-million-address sweep across
+          somebody's WAN.
+        </p>
+        <p>
+          Scanning address space you were not asked to scan is not a bug you
+          apologise for. It is the kind that ends an engagement, and on the
+          wrong network it is the kind that involves lawyers. The tool refuses
+          in every ambiguous case, because there is no version of "I guessed and
+          got it right" worth the version where I guessed wrong.
+        </p>
+
+        <h2>The general shape</h2>
+        <p>
+          Every one of these four bugs produced output. None of them produced an
+          error. The scan returned a device list, the reconciliation returned
+          findings, the report rendered, the run exited zero.
+        </p>
+        <p>
+          That is the failure mode worth designing against in anything whose
+          output someone acts on. A crash is self-reporting &mdash; it tells you
+          precisely where to look and it is impossible to ignore. A plausible
+          wrong answer recruits the reader into the mistake, and the more
+          polished the output looks, the more thoroughly it does that. My report
+          had summary tiles and severity badges and a clean layout while it was
+          telling the reader that every machine in the building was
+          simultaneously missing and unidentified.
+        </p>
+        <p>
+          Which leads to the rule I would keep from this: <strong>decide what
+          your tool does when it does not know.</strong> Silence from a host is
+          not absence. A name that does not match is not proof of a stranger. An
+          empty configuration is not permission. Every one of those is a place
+          where the code has to choose between reporting uncertainty and
+          inventing a confident answer, and the default in most code is,
+          quietly, to invent one.
+        </p>
+        <p>Probe twice. Normalise before you compare. Fail closed. Look at the output.</p>
+      </div>
+
+      <p class="post-foot">
+        The tool described here is
+        <a href="https://github.com/ezekiel06/ad-inventory">ad-inventory</a>, a
+        read-only PowerShell network inventory and Active Directory
+        reconciliation tool. It ships with a demo mode that generates a full
+        report with no network or domain required. All four bugs above were real,
+        found while building it.
+      </p>
+    </div>
+  </article>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p class="tag">&copy; <span id="year"></span> Zeke M. Horton &middot; Built with Claude Code</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
