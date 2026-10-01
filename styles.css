@@ -490,9 +490,46 @@ a:focus-visible, button:focus-visible {
   border-top: 1px solid var(--rule);
 }
 .post-body p { margin: 0 0 17px; font-size: 16.5px; }
-.post-body ul { margin: 0 0 17px; padding-left: 20px; }
+.post-body ul,
+.post-body ol { margin: 0 0 17px; padding-left: 20px; }
 .post-body li { margin-bottom: 8px; font-size: 16px; }
 .post-body li::marker { color: var(--rule); }
+.post-body ol li::marker { color: var(--signal); font-family: var(--mono); font-size: .9em; }
+
+/* Added for the agent-honesty entry, the first with quoted prompts and result
+   tables. Same parts as the listings below: --panel ground, --rule borders, the
+   --signal left edge, mono uppercase headers like every other label. The table
+   scrolls inside its own wrapper so a narrow phone never gets a page-wide
+   horizontal scroll (the overflow the network-scan entry describes). */
+.post-body blockquote {
+  margin: 0 0 17px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-left: 3px solid var(--signal);
+  font-size: 16px;
+  font-style: italic;
+}
+.table-wrap {
+  margin: 0 0 17px;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+}
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.table-wrap th {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: bottom;
+}
+.table-wrap td { padding: 8px 12px; border-top: 1px solid var(--rule); }
+.table-wrap tbody tr:first-child td { border-top: 0; }
 
 /* 21 inline <code> spans across the entries; without this they would fall
    back to the browser default and read as unstyled body text. */
